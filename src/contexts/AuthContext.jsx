@@ -13,7 +13,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [defaulters, setDefaulters] = useState(() => {
     try {
-      const savedDefaulters = localStorage.getItem('defaulters');
+      const savedDefaulters = localStorage.getItem('lendlens_defaulters');
       return savedDefaulters ? JSON.parse(savedDefaulters) : [];
     } catch (error) {
       console.error('Error loading defaulters from localStorage:', error);
@@ -30,9 +30,11 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
+  // Save defaulters to localStorage whenever they change
   useEffect(() => {
     try {
-      localStorage.setItem('defaulters', JSON.stringify(defaulters));
+      localStorage.setItem('lendlens_defaulters', JSON.stringify(defaulters));
+      console.log('Saved defaulters to localStorage:', defaulters);
     } catch (error) {
       console.error('Error saving defaulters to localStorage:', error);
     }
@@ -42,12 +44,14 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const cleanup = setInterval(() => {
       const now = new Date();
-      setDefaulters(prevDefaulters => 
-        prevDefaulters.map(item => ({
+      setDefaulters(prevDefaulters => {
+        const updated = prevDefaulters.map(item => ({
           ...item,
           isExpired: new Date(item.endTime) <= now
-        }))
-      );
+        }));
+        console.log('Updated defaulters with expiration:', updated);
+        return updated;
+      });
     }, 1000);
 
     return () => clearInterval(cleanup);
@@ -110,11 +114,15 @@ export const AuthProvider = ({ children }) => {
   };
 
   const toggleDefaulterStatus = (id) => {
-    setDefaulters(prev => prev.map(defaulter => 
-      defaulter.id === id 
-        ? { ...defaulter, enabled: !defaulter.enabled }
-        : defaulter
-    ));
+    setDefaulters(prevDefaulters => {
+      const updated = prevDefaulters.map(defaulter => 
+        defaulter.id === id 
+          ? { ...defaulter, enabled: !defaulter.enabled }
+          : defaulter
+      );
+      console.log('Toggled defaulter status:', updated);
+      return updated;
+    });
   };
 
   const value = {
