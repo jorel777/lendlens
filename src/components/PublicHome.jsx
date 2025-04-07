@@ -67,11 +67,11 @@ const PublicHome = () => {
               <ImageCard
                 key={defaulter.id}
                 image={defaulter.image}
-                itemName={defaulter.itemName}
-                endTime={defaulter.endTime}
+                itemName={defaulter.item_name || defaulter.itemName}
+                endTime={defaulter.end_time || defaulter.endTime}
                 amount={defaulter.amount}
                 currency={defaulter.currency}
-                isExpired={defaulter.isExpired}
+                isExpired={defaulter.is_expired || defaulter.isExpired}
                 onReport={() => {
                   setSelectedDefaulter(defaulter);
                   setIsReportModalOpen(true);

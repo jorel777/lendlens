@@ -18,23 +18,12 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [selectedDefaulter, setSelectedDefaulter] = useState(null);
-  const [items, setItems] = useState(() => {
-    try {
-      const savedItems = localStorage.getItem('defaulters');
-      return savedItems ? JSON.parse(savedItems) : [];
-    } catch (error) {
-      console.error('Error loading defaulters from localStorage:', error);
-      return [];
-    }
-  });
+  const [items, setItems] = useState([]);
 
+  // Clear localStorage on component mount
   useEffect(() => {
-    try {
-      localStorage.setItem('defaulters', JSON.stringify(items));
-    } catch (error) {
-      console.error('Error saving defaulters to localStorage:', error);
-    }
-  }, [items]);
+    localStorage.removeItem('defaulters');
+  }, []);
 
   const handleAddItem = (formData) => {
     if (!formData.image) {
@@ -90,18 +79,20 @@ function App() {
   return (
     <AuthProvider>
       <Router basename="/lendlens">
-        <Routes>
-          <Route path="/" element={<PublicHome />} />
-          <Route path="/login" element={<Login />} />
-          <Route
-            path="/admin"
-            element={
-              <PrivateRoute>
-                <AdminDashboard />
-              </PrivateRoute>
-            }
-          />
-        </Routes>
+        <div className="min-h-screen bg-secondary">
+          <Routes>
+            <Route path="/" element={<PublicHome />} />
+            <Route path="/login" element={<Login />} />
+            <Route
+              path="/admin"
+              element={
+                <PrivateRoute>
+                  <AdminDashboard />
+                </PrivateRoute>
+              }
+            />
+          </Routes>
+        </div>
       </Router>
 
       <div className="min-h-screen bg-secondary">
