@@ -21,29 +21,18 @@ const ImageUploadModal = ({ isOpen, onClose, onSubmit }) => {
     amount: '',
     currency: 'GHS'
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const convertToBase64 = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = (error) => reject(error);
-    });
-  };
-
-  const handleImageChange = async (e) => {
+  const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      try {
-        const base64 = await convertToBase64(file);
-        setFormData(prev => ({
-          ...prev,
-          image: file,
-          imageUrl: base64
-        }));
-      } catch (error) {
-        console.error('Error converting image:', error);
-      }
+      // Create a preview URL for the image
+      const previewUrl = URL.createObjectURL(file);
+      setFormData(prev => ({
+        ...prev,
+        image: file,
+        imageUrl: previewUrl
+      }));
     }
   };
 
@@ -51,7 +40,7 @@ const ImageUploadModal = ({ isOpen, onClose, onSubmit }) => {
     e.preventDefault();
     
     // Validate required fields
-    if (!formData.imageUrl) {
+    if (!formData.image) {
       alert('Please select an image');
       return;
     }
@@ -75,6 +64,7 @@ const ImageUploadModal = ({ isOpen, onClose, onSubmit }) => {
     console.log('Submitting defaulter:', submissionData);
     
     try {
+      setIsSubmitting(true);
       await onSubmit(submissionData);
       // Reset form
       setFormData({
@@ -90,6 +80,8 @@ const ImageUploadModal = ({ isOpen, onClose, onSubmit }) => {
     } catch (error) {
       console.error('Error submitting defaulter:', error);
       alert('Error adding defaulter. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -223,9 +215,19 @@ const ImageUploadModal = ({ isOpen, onClose, onSubmit }) => {
             </div>
           </div>
 
-          <button type="submit" className="btn-primary w-full flex items-center justify-center">
-            <Upload className="w-5 h-5 mr-2" />
-            Add Defaulter
+          <button 
+            type="submit" 
+            className="btn-primary w-full flex items-center justify-center"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <span>Adding...</span>
+            ) : (
+              <>
+                <Upload className="w-5 h-5 mr-2" />
+                Add Defaulter
+              </>
+            )}
           </button>
         </form>
       </div>

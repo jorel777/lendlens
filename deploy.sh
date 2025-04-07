@@ -15,17 +15,16 @@ cp index.html 404.html
 # create .nojekyll file to bypass GitHub Pages Jekyll processing
 touch .nojekyll
 
-cd -
-
-# if you are deploying to a custom domain
-# echo 'www.example.com' > CNAME
-
+# force clean and initialize git
+rm -rf .git
 git init
-git add -A
+git checkout -b master
+
+# add all files
+git add -f .
 git commit -m 'deploy'
 
-# if you are deploying to https://<USERNAME>.github.io
-# git push -f git@github.com:<USERNAME>/<USERNAME>.github.io.git main
+# deploy to GitHub Pages
+git push -f https://github.com/jorel777/lendlens.git master:gh-pages
 
-# if you are deploying to https://<USERNAME>.github.io/<REPO>
-git push -f https://github.com/jorel777/lendlens.git main:gh-pages 
+cd - 

@@ -1,4 +1,21 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { 
+  signInWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged 
+} from 'firebase/auth';
+import { 
+  collection, 
+  addDoc, 
+  getDocs, 
+  updateDoc, 
+  doc, 
+  query, 
+  where, 
+  onSnapshot 
+} from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { auth, db, storage } from '../firebase';
 
 const AuthContext = createContext(null);
 
@@ -11,68 +28,81 @@ const ADMIN_CREDENTIALS = {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [defaulters, setDefaulters] = useState(() => {
-    try {
-      const savedDefaulters = localStorage.getItem('lendlens_defaulters');
-      return savedDefaulters ? JSON.parse(savedDefaulters) : [];
-    } catch (error) {
-      console.error('Error loading defaulters from localStorage:', error);
-      return [];
-    }
-  });
+  const [defaulters, setDefaulters] = useState([]);
 
+  // Listen for auth state changes
   useEffect(() => {
-    // Check for existing session
-    const savedUser = localStorage.getItem('lendlens_user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-    setLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // User is signed in
+        setUser({
+          uid: user.uid,
+          email: user.email,
+          role: 'admin' // In a real app, you'd store roles in Firestore
+        });
+      } else {
+        // User is signed out
+        setUser(null);
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  // Save defaulters to localStorage whenever they change
+  // Listen for defaulters changes
   useEffect(() => {
-    try {
-      localStorage.setItem('lendlens_defaulters', JSON.stringify(defaulters));
-      console.log('Saved defaulters to localStorage:', defaulters);
-    } catch (error) {
-      console.error('Error saving defaulters to localStorage:', error);
-    }
-  }, [defaulters]);
+    if (!user) return;
+
+    const defaultersRef = collection(db, 'defaulters');
+    const q = query(defaultersRef);
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const defaultersData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      console.log('Fetched defaulters from Firestore:', defaultersData);
+      setDefaulters(defaultersData);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
 
   // Clean up expired items
   useEffect(() => {
     const cleanup = setInterval(() => {
       const now = new Date();
-      setDefaulters(prevDefaulters => {
-        const updated = prevDefaulters.map(item => ({
+      setDefaulters(prevDefaulters => 
+        prevDefaulters.map(item => ({
           ...item,
           isExpired: new Date(item.endTime) <= now
-        }));
-        console.log('Updated defaulters with expiration:', updated);
-        return updated;
-      });
+        }))
+      );
     }, 1000);
 
     return () => clearInterval(cleanup);
   }, []);
 
-  const login = (email, password) => {
-    if (email === ADMIN_CREDENTIALS.email && password === ADMIN_CREDENTIALS.password) {
-      const userData = { email, role: 'admin' };
-      setUser(userData);
-      localStorage.setItem('lendlens_user', JSON.stringify(userData));
+  const login = async (email, password) => {
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
       return true;
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
     }
-    return false;
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('lendlens_user');
+  const logout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
-  const addDefaulter = (formData) => {
+  const addDefaulter = async (formData) => {
     console.log('Adding defaulter with data:', formData);
     
     if (!formData.imageUrl) {
@@ -86,26 +116,30 @@ export const AuthProvider = ({ children }) => {
       24 * 60 * 60 * 1000
     );
     
-    const newDefaulter = {
-      id: Date.now().toString(),
-      image: formData.imageUrl,
-      itemName: formData.itemName,
-      amount: parseFloat(formData.amount),
-      currency: formData.currency,
-      endTime: new Date(Date.now() + durationInMs).toISOString(),
-      enabled: true,
-      isExpired: false,
-      createdAt: new Date().toISOString()
-    };
-
-    console.log('Creating new defaulter:', newDefaulter);
-    
     try {
-      setDefaulters(prevDefaulters => {
-        const updated = [...prevDefaulters, newDefaulter];
-        console.log('Updated defaulters list:', updated);
-        return updated;
-      });
+      // Upload image to Firebase Storage
+      const imageFile = formData.image;
+      const storageRef = ref(storage, `defaulters/${Date.now()}_${imageFile.name}`);
+      await uploadBytes(storageRef, imageFile);
+      const imageUrl = await getDownloadURL(storageRef);
+      
+      const newDefaulter = {
+        image: imageUrl,
+        itemName: formData.itemName,
+        amount: parseFloat(formData.amount),
+        currency: formData.currency,
+        endTime: new Date(Date.now() + durationInMs).toISOString(),
+        enabled: true,
+        isExpired: false,
+        createdAt: new Date().toISOString()
+      };
+
+      console.log('Creating new defaulter:', newDefaulter);
+      
+      // Add to Firestore
+      const docRef = await addDoc(collection(db, 'defaulters'), newDefaulter);
+      console.log('Defaulter added with ID:', docRef.id);
+      
       return true;
     } catch (error) {
       console.error('Error adding defaulter:', error);
@@ -113,16 +147,21 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const toggleDefaulterStatus = (id) => {
-    setDefaulters(prevDefaulters => {
-      const updated = prevDefaulters.map(defaulter => 
-        defaulter.id === id 
-          ? { ...defaulter, enabled: !defaulter.enabled }
-          : defaulter
-      );
-      console.log('Toggled defaulter status:', updated);
-      return updated;
-    });
+  const toggleDefaulterStatus = async (id) => {
+    try {
+      const defaulterRef = doc(db, 'defaulters', id);
+      const defaulter = defaulters.find(d => d.id === id);
+      
+      if (defaulter) {
+        await updateDoc(defaulterRef, {
+          enabled: !defaulter.enabled
+        });
+        console.log('Toggled defaulter status:', id);
+      }
+    } catch (error) {
+      console.error('Error toggling defaulter status:', error);
+      throw error;
+    }
   };
 
   const value = {
