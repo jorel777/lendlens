@@ -47,23 +47,48 @@ const ImageUploadModal = ({ isOpen, onClose, onSubmit }) => {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSubmit({
+    
+    // Validate required fields
+    if (!formData.imageUrl) {
+      alert('Please select an image');
+      return;
+    }
+
+    if (!formData.itemName.trim()) {
+      alert('Please enter a defaulter name');
+      return;
+    }
+
+    if (!formData.amount || parseFloat(formData.amount) <= 0) {
+      alert('Please enter a valid amount');
+      return;
+    }
+
+    const submissionData = {
       ...formData,
-      image: formData.image,
-      imageUrl: formData.imageUrl // This is now a base64 string
-    });
-    setFormData({
-      image: null,
-      imageUrl: '',
-      itemName: '',
-      duration: 60,
-      durationUnit: 'minutes',
-      amount: '',
-      currency: 'GHS'
-    });
-    onClose();
+      amount: parseFloat(formData.amount)
+    };
+
+    console.log('Submitting defaulter:', submissionData);
+    
+    try {
+      onSubmit(submissionData);
+      setFormData({
+        image: null,
+        imageUrl: '',
+        itemName: '',
+        duration: 60,
+        durationUnit: 'minutes',
+        amount: '',
+        currency: 'GHS'
+      });
+      onClose();
+    } catch (error) {
+      console.error('Error submitting defaulter:', error);
+      alert('Error adding defaulter. Please try again.');
+    }
   };
 
   if (!isOpen) return null;
