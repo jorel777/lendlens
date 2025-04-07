@@ -68,13 +68,15 @@ const ImageUploadModal = ({ isOpen, onClose, onSubmit }) => {
 
     const submissionData = {
       ...formData,
-      amount: parseFloat(formData.amount)
+      amount: parseFloat(formData.amount),
+      duration: parseInt(formData.duration)
     };
 
     console.log('Submitting defaulter:', submissionData);
     
     try {
-      onSubmit(submissionData);
+      await onSubmit(submissionData);
+      // Reset form
       setFormData({
         image: null,
         imageUrl: '',

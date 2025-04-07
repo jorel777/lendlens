@@ -15,11 +15,13 @@ const AdminDashboard = () => {
     navigate('/login');
   };
 
-  const handleAddDefaulter = (formData) => {
+  const handleAddDefaulter = async (formData) => {
     try {
       console.log('AdminDashboard: Attempting to add defaulter:', formData);
-      addDefaulter(formData);
-      setIsModalOpen(false);
+      const success = await addDefaulter(formData);
+      if (success) {
+        setIsModalOpen(false);
+      }
     } catch (error) {
       console.error('AdminDashboard: Error adding defaulter:', error);
       alert('Failed to add defaulter. Please try again.');

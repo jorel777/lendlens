@@ -83,21 +83,22 @@ export const AuthProvider = ({ children }) => {
     );
     
     const newDefaulter = {
-      id: Date.now(),
+      id: Date.now().toString(),
       image: formData.imageUrl,
       itemName: formData.itemName,
       amount: parseFloat(formData.amount),
       currency: formData.currency,
       endTime: new Date(Date.now() + durationInMs).toISOString(),
       enabled: true,
-      isExpired: false
+      isExpired: false,
+      createdAt: new Date().toISOString()
     };
 
     console.log('Creating new defaulter:', newDefaulter);
     
     try {
-      setDefaulters(prev => {
-        const updated = [...prev, newDefaulter];
+      setDefaulters(prevDefaulters => {
+        const updated = [...prevDefaulters, newDefaulter];
         console.log('Updated defaulters list:', updated);
         return updated;
       });
