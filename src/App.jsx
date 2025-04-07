@@ -78,7 +78,7 @@ function App() {
 
   return (
     <AuthProvider>
-      <Router basename="/lendlens">
+      <Router>
         <div className="min-h-screen bg-secondary">
           <Routes>
             <Route path="/" element={<PublicHome />} />
@@ -92,50 +92,20 @@ function App() {
               }
             />
           </Routes>
+          
+          <Header onAddClick={() => setIsModalOpen(true)} />
         </div>
       </Router>
 
-      <div className="min-h-screen bg-secondary">
-        <Header onAddClick={() => setIsModalOpen(true)} />
-        
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <h2 className="text-2xl font-bold text-white mb-8">Active Defaulters</h2>
-          {items.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-400">No active defaulters at the moment</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {items.map(item => (
-                <ImageCard
-                  key={item.id}
-                  image={item.image}
-                  itemName={item.itemName}
-                  endTime={item.endTime}
-                  amount={item.amount}
-                  currency={item.currency}
-                  isExpired={item.isExpired}
-                  onReport={() => handleReportClick(item)}
-                />
-              ))}
-            </div>
-          )}
-        </main>
-
-        <footer className="border-t border-gray-800 mt-12">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <p className="text-center text-sm text-gray-500">
-              © 2025 Blacklist — High-stakes accountability platform
-            </p>
-          </div>
-        </footer>
-
+      {isModalOpen && (
         <ImageUploadModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           onSubmit={handleAddItem}
         />
+      )}
 
+      {isReportModalOpen && (
         <ReportModal
           isOpen={isReportModalOpen}
           onClose={() => {
@@ -144,7 +114,7 @@ function App() {
           }}
           onSubmit={handleReportSubmit}
         />
-      </div>
+      )}
     </AuthProvider>
   );
 }
